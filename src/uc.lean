@@ -5,7 +5,8 @@ import computability.turing_machine
 import data.polynomial.basic
 import data.polynomial.eval
 import data.finset.basic
-import measure_theory.measurable_space_def
+-- import measure_theory.measurable_space_def
+import .distribution_ensemble
 
 /-!
 # UC Protocols
@@ -19,13 +20,9 @@ This file defines protocols as they are understood in the
 
 def ste := list bool
 
-/-- 
-An ensemble of states is a collection of distibutions of states indexed by a security parameter.
-Here, we take the distribution to be some mutiset. 
--/
-def ensemble (α : Type) := ℕ → multiset α
-
-def message := list bool
+structure message := 
+(import_tokens : ℕ)
+(content : list (bool))
 
 def pair (m1 m2 : message) : message := sorry -- computes a list encoding a pair of lists
 def unpair_left (m : message) : message := sorry -- computes the left of a pair encoding
@@ -46,9 +43,11 @@ structure machine :=
   (callers : finset (ℕ)) -- Ids of machines that input to this machine
   (subroutines : finset (ℕ)) -- Ids of machines that give subroutine output to this machine
   (backdoor : finset (ℕ)) -- Ids of machines that backdoor to this machine
-  (program : ste → ℕ → message → option (ste × ℕ × message)) 
-    -- given a starting state and a message from ID, return a new state and an outgoing message, or optionally halt
+  -- given a starting state and a message from ID, return a new state and an outgoing message, or optionally halt
+  (program : ste → ℕ → message → option (ste × ℕ × message))
     -- TODO add condition for polytime halting
+  (environment_output : option (ste → bool)) 
+    -- Optional function for environement machines to run on the environment's state when it halts to determine its output variable
 
 instance : decidable_eq machine := sorry
 
@@ -98,35 +97,45 @@ def external_ids (π : protocol) : finset ℕ :=
   (finset.bUnion (π.machines) (λ μ, μ.callers)) \ π.ids
 
 /-- As defined in 2.2.1 -/
-def execution (𝓟 : protocol) (𝓐 : machine) (𝓔 : machine)
-  (environment_output : ste → bool) -- run on the environment's state when it halt to determine its output variable
+def execution (π : protocol) (𝓐 : machine) (𝓔 : machine) :
   -- (initial_states : ℕ → ste) -- randomness initialization for the machines in the protocol (including input for environment)
   -- (environment_id_zero : 𝓔.id = 0) -- environment machine has id 0
   -- (adversary_id_one : 𝓐.id = 1) -- adversaty machine has id 1
   -- (h0 : 0 ∉ 𝓟.ids) (h1 : 1 ∉ 𝓟.ids) -- 𝓟 does not have 0 or 1 in its id list
   -- (h0' : 0 ∉ external_ids 𝓟) (h1' : 1 ∉ external_ids 𝓟) -- or in its external ids
-   : ensemble bool := sorry
+  ensemble bool := 
+sorry
 
-/-- Indistinguishability of ensembles of bools -/
-def indistinguishable (f g : ensemble bool) : Prop := 
-  ∃ (p : polynomial ℕ), ∀ n : ℕ, 
-    (((f n).count tt : ℚ) / (f n).card) - (((g n).count tt : ℚ) / (f n).card) ≤ (1 : ℚ) / p.eval n
+/--  
+See definition on page 42. 
+An environment is balanced if, at any point in time during the execution, the overall import of
+the inputs given to the adversary is at least the sum of the imports of all the other inputs given 
+to all the other ITIs in the system so far 
+-/
+def balanced (𝓔 : machine) : Prop :=
+sorry
 
 /-- As defined in 2.2.1 Definition 1 -/
 def emulates (π ϕ : protocol) : Prop :=
-  ∀ (𝓐 : machine), ∃ (𝓢 : machine), ∀ (𝓔 : machine) (out : ste → bool),
-    indistinguishable (λ s, execution π 𝓐 𝓔 out s) (λ s, execution π 𝓢 𝓔 out s)
+  ∀ (𝓐 : machine), ∃ (𝓢 : machine), ∀ (𝓔 : machine),
+    balanced 𝓔 → (execution π 𝓐 𝓔 ≈ₛ execution π 𝓢 𝓔)
 
 def dummy_machine (ident : ℕ) (forwards_to : ℕ) (callers : finset ℕ) : machine := 
 { ident := ident,
-  initial_state := λ n, {[]}, -- doesn't matter, stateless
+  initial_state := λ n, 
+  { val := λ s, if s = [] then 1 else 0, -- todo replace with const added to pmf.lean
+    property := 
+    begin
+      apply has_sum_ite_eq,
+    end }, -- doesn't matter, stateless
   callers := callers,
   subroutines := {forwards_to},
   backdoor := ∅,
   program := λ st idx msg, 
     if idx = forwards_to 
       then some ⟨st, decode (unpair_left msg), unpair_right msg⟩
-      else some ⟨st, forwards_to, pair msg (encode idx)⟩ }
+      else some ⟨st, forwards_to, pair msg (encode idx)⟩,
+  environment_output := none }
 
 /-- 
 Per section 2.2.2, a functionality is described with an ideal protocol which is a protocol with a 
@@ -170,6 +179,9 @@ instance : has_subset (protocol) := ⟨λ ϕ π, subroutine ϕ π⟩
 def compatible (π ϕ : protocol) : Prop :=
 ∀ μ ∈ π.machines, ∃! μ' ∈ ϕ.machines, ((μ : machine).ident) = (μ'.ident) ∧ μ.callers = μ'.callers
 -- Fails without the type ascription, post to forum to figure out whats wrong
+-- Is it that lean doesn't know what the type of a member of a list of machines is?
+-- I can accept that there might be different has_mem instances for a type, but the infoview
+-- indicates it knows μ is a machine
 
 def identity_compatible (π ρ ϕ : protocol) :=
 disjoint (π.ids) (ρ.ids \ ϕ.ids)
