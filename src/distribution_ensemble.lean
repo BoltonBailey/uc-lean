@@ -19,7 +19,7 @@ def ensemble (α : Type) : Type := ℕ → pmf α
 
 variables {α : Type}
 
--- TODO send to mathlib
+-- TODO send to mathlib. see https://leanprover.zulipchat.com/#narrow/stream/217875-Is-there-code-for-X.3F/topic/Total.20variation.20distance.20on.20pmf/near/281214430
 instance total_variation : metric_space (pmf α) := sorry
 -- { dist := λ u v, tsum (abs ((↑(u : α → ℝ≥0) : α → ℝ) - ↑(v : α → ℝ≥0))),
 --   dist_self := by {intros x, cases x, simp only [sub_self], rw abs_zero, }, -- diamond
