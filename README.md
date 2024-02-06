@@ -9,6 +9,6 @@ Some potentially relevant papers:
 
 * ["A Simpler Variant of Universally Composable Security for Standard Multiparty Computation"](https://eprint.iacr.org/2014/553.pdf)
 * ["Algebraic Adversaries in the Universal Composability Framework"](https://eprint.iacr.org/2021/1218)
-* ["Categorical composable cryptography"](https://arxiv.org/pdf/2208.13232.pdf) (Note Lean defines Symmetric Monoidal Categories)
+* ["Categorical composable cryptography"](https://arxiv.org/pdf/2208.13232.pdf) (Note mathlib defines Symmetric Monoidal Categories)
 
 
